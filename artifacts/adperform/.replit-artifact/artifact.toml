@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "AdPerform"
+description = "منصة تسويق عبر المؤثرين تعتمد على الأداء، تربط المعلنين بصناع المحتوى وتعرض الحملات والأداء والمراجعات والمحافظ في تجربة SaaS احترافية."
+version = "1.0.0"
+id = "artifacts/adperform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18585
+
+[services.development]
+run = "pnpm --filter @workspace/adperform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/adperform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/adperform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18585"
+BASE_PATH = "/"
