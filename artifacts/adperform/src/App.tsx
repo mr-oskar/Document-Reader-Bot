@@ -1,5 +1,8 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ClerkProvider, SignIn, SignUp, useAuth } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -135,12 +138,7 @@ function Landing() {
 }
 
 function Login() {
-  const [, setLocation] = useLocation();
-  const [role, setRole] = useState<Role>('advertiser');
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const enter = () => { setLoading(true); window.setTimeout(() => { setLoading(false); setLocation(`/${role}`); }, 400); };
-  return <div dir="rtl" className="grid min-h-[100dvh] bg-[#f6f3eb] lg:grid-cols-[1fr_.85fr]"><div className="relative hidden overflow-hidden bg-[#173b45] p-12 text-white lg:flex lg:flex-col lg:justify-between"><div className="absolute -left-32 top-20 size-[32rem] rounded-full border-[50px] border-white/5" /><div className="absolute bottom-12 right-12 size-40 rounded-full bg-accent/20 blur-3xl" /><AppLogo light /><div className="relative max-w-md"><div className="mb-5 text-sm font-semibold text-[#8ad7b8]">مساحة العمل التي تقيس ما يهم</div><h1 className="text-5xl font-bold leading-tight">أهلاً بك في<br /><span className="text-[#f0b255]">غرفة الأداء.</span></h1><p className="mt-6 leading-8 text-white/60">كل حملة، كل قطعة محتوى، وكل نتيجة — متصلة في صورة واحدة.</p></div><div className="relative flex items-center gap-3 text-xs text-white/45"><ShieldCheck className="size-4 text-[#8ad7b8]" />بياناتك محمية ومشفرة دائماً</div></div><div className="flex items-center justify-center p-5 md:p-10"><div className="w-full max-w-md"><div className="mb-10 lg:hidden"><AppLogo /></div><div className="mb-8"><div className="text-sm font-bold text-primary">تسجيل الدخول</div><h2 className="mt-2 text-3xl font-bold">ابدأ من حيث توقفت.</h2><p className="mt-3 text-sm text-muted-foreground">اختر مساحة العمل التجريبية للدخول مباشرة.</p></div><div className="mb-6 grid grid-cols-2 gap-2 rounded-xl bg-secondary p-1.5">{([['advertiser', 'معلن', Building2], ['creator', 'مبدع', Sparkles]] as const).map(([value, label, Icon]) => <button type="button" key={value} onClick={() => setRole(value)} className={`flex items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold ${role === value ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`} data-testid={`button-role-${value}`}><Icon className="size-4" />{label}</button>)}</div><label className="mb-2 block text-sm font-semibold" htmlFor="email">البريد الإلكتروني</label><input id="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" className="mb-4 w-full rounded-lg border bg-card px-4 py-3 text-left outline-none ring-primary focus:ring-2" dir="ltr" data-testid="input-email" /><label className="mb-2 block text-sm font-semibold" htmlFor="password">كلمة المرور</label><input id="password" type="password" defaultValue="password" className="mb-2 w-full rounded-lg border bg-card px-4 py-3 text-left outline-none ring-primary focus:ring-2" dir="ltr" data-testid="input-password" /><div className="mb-7 text-left text-xs font-semibold text-primary">نسيت كلمة المرور؟</div><Button onClick={enter} className="w-full py-3.5" disabled={loading} testId="button-login">{loading ? 'جارٍ الدخول...' : <><LogIn className="size-4" />دخول تجريبي كـ {role === 'advertiser' ? 'معلن' : 'مبدع'}</>}</Button><div className="mt-7 flex items-center gap-3 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border" />أو<div className="h-px flex-1 bg-border" /></div><Button href="/" variant="ghost" className="mt-4 w-full">العودة إلى الصفحة الرئيسية</Button></div></div></div>;
+  return <div dir="rtl" className="grid min-h-[100dvh] bg-[#f6f3eb] lg:grid-cols-[1fr_.85fr]"><div className="relative hidden overflow-hidden bg-[#173b45] p-12 text-white lg:flex lg:flex-col lg:justify-between"><div className="absolute -left-32 top-20 size-[32rem] rounded-full border-[50px] border-white/5" /><div className="absolute bottom-12 right-12 size-40 rounded-full bg-accent/20 blur-3xl" /><AppLogo light /><div className="relative max-w-md"><div className="mb-5 text-sm font-semibold text-[#8ad7b8]">مساحة العمل التي تقيس ما يهم</div><h1 className="text-5xl font-bold leading-tight">أهلاً بك في<br /><span className="text-[#f0b255]">غرفة الأداء.</span></h1><p className="mt-6 leading-8 text-white/60">كل حملة، كل قطعة محتوى، وكل نتيجة — متصلة في صورة واحدة.</p></div><div className="relative flex items-center gap-3 text-xs text-white/45"><ShieldCheck className="size-4 text-[#8ad7b8]" />بياناتك محمية ومشفرة دائماً</div></div><div className="flex items-center justify-center p-5 md:p-10"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div></div>;
 }
 
 function Dashboard({ role }: { role: Role }) {
@@ -225,7 +223,8 @@ function ReviewDetail() {
 }
 
 function AdminOverview() {
-  return <><PageHead eyebrow="إدارة المنصة" title="الصورة التشغيلية الكاملة" subtitle="كل ما يحتاجه فريق AdPerform للحفاظ على أداء المنصة." action={<Badge tone="green"><Activity className="size-3.5" />كل الأنظمة تعمل</Badge>} /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard title="إجمالي المستخدمين" value="١٢٬٤٨٠" change="+٨.٢%" icon={Users} /><StatCard title="حملات نشطة" value="٨٤٢" change="+١٤.٦%" icon={BriefcaseBusiness} accent="blue" /><StatCard title="حجم المدفوعات" value="٢.٨M ر.س" change="+١٩.٤%" icon={CircleDollarSign} accent="amber" /><StatCard title="زمن المراجعة" value="٢:١٤ س" change="−١٨.٢%" icon={Clock3} /></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.3fr_.7fr]"><section className="rounded-xl border bg-card p-6"><div className="flex justify-between"><h3 className="font-bold">نشاط المنصة</h3><span className="text-xs text-muted-foreground">آخر ٣٠ يوماً</span></div><div className="mt-8 flex h-52 items-end gap-2">{[44,55,48,64,51,70,63,79,68,91,75,100,86,94,81,96,88,104].map((x, i) => <div key={i} className="flex-1 rounded-t bg-primary/80" style={{ height: `${x * .8}%` }} />)}</div></section><section className="rounded-xl border bg-card p-6"><h3 className="font-bold">صحة المنصة</h3><div className="mt-6 space-y-5">{[['المعلنين النشطين', 76], ['المبدعين النشطين', 88], ['معدل اكتمال الحملات', 64], ['رضا المستخدمين', 92]].map(([x, v]) => <div key={String(x)}><div className="mb-2 flex justify-between text-sm"><span>{x}</span><strong className="font-mono-app">{v}%</strong></div><ProgressBar value={Number(v)} color="bg-primary" /></div>)}</div></section></div><div className="mt-5 grid gap-4 md:grid-cols-3">{[['٢٨', 'محتوى يحتاج مراجعة', '/admin/content', Clock3], ['١٢', 'حساباً يحتاج تحققاً', '/admin/users', UserCheck], ['٧', 'حملات بانتظار الاعتماد', '/admin/campaigns', ShieldCheck]].map(([n, t, h, Icon]) => <Link href={String(h)} key={String(t)} className="flex items-center gap-4 rounded-xl border bg-card p-5 hover:border-primary/40" data-testid={`card-admin-action-${t}`}><div className="grid size-11 place-items-center rounded-xl bg-accent/20 text-amber-700"><Icon className="size-5" /></div><div><div className="font-mono-app text-2xl font-bold">{n}</div><div className="text-sm text-muted-foreground">{t}</div></div><ChevronLeft className="mr-auto size-4" /></Link>)}</div></>;
+  const quickActions: Array<[string, string, string, typeof Activity]> = [['٢٨', 'محتوى يحتاج مراجعة', '/admin/content', Clock3], ['١٢', 'حساباً يحتاج تحققاً', '/admin/users', UserCheck], ['٧', 'حملات بانتظار الاعتماد', '/admin/campaigns', ShieldCheck]];
+  return <><PageHead eyebrow="إدارة المنصة" title="الصورة التشغيلية الكاملة" subtitle="كل ما يحتاجه فريق AdPerform للحفاظ على أداء المنصة." action={<Badge tone="green"><Activity className="size-3.5" />كل الأنظمة تعمل</Badge>} /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard title="إجمالي المستخدمين" value="١٢٬٤٨٠" change="+٨.٢%" icon={Users} /><StatCard title="حملات نشطة" value="٨٤٢" change="+١٤.٦%" icon={BriefcaseBusiness} accent="blue" /><StatCard title="حجم المدفوعات" value="٢.٨M ر.س" change="+١٩.٤%" icon={CircleDollarSign} accent="amber" /><StatCard title="زمن المراجعة" value="٢:١٤ س" change="−١٨.٢%" icon={Clock3} /></div><div className="mt-5 grid gap-5 lg:grid-cols-[1.3fr_.7fr]"><section className="rounded-xl border bg-card p-6"><div className="flex justify-between"><h3 className="font-bold">نشاط المنصة</h3><span className="text-xs text-muted-foreground">آخر ٣٠ يوماً</span></div><div className="mt-8 flex h-52 items-end gap-2">{[44,55,48,64,51,70,63,79,68,91,75,100,86,94,81,96,88,104].map((x, i) => <div key={i} className="flex-1 rounded-t bg-primary/80" style={{ height: `${x * .8}%` }} />)}</div></section><section className="rounded-xl border bg-card p-6"><h3 className="font-bold">صحة المنصة</h3><div className="mt-6 space-y-5">{[['المعلنين النشطين', 76], ['المبدعين النشطين', 88], ['معدل اكتمال الحملات', 64], ['رضا المستخدمين', 92]].map(([x, v]) => <div key={String(x)}><div className="mb-2 flex justify-between text-sm"><span>{x}</span><strong className="font-mono-app">{v}%</strong></div><ProgressBar value={Number(v)} color="bg-primary" /></div>)}</div></section></div><div className="mt-5 grid gap-4 md:grid-cols-3">{quickActions.map(([n, t, h, Icon]) => <Link href={h} key={t} className="flex items-center gap-4 rounded-xl border bg-card p-5 hover:border-primary/40" data-testid={`card-admin-action-${t}`}><div className="grid size-11 place-items-center rounded-xl bg-accent/20 text-amber-700"><Icon className="size-5" /></div><div><div className="font-mono-app text-2xl font-bold">{n}</div><div className="text-sm text-muted-foreground">{t}</div></div><ChevronLeft className="mr-auto size-4" /></Link>)}</div></>;
 }
 
 function AdminFinance() { return <><PageHead eyebrow="العمليات المالية" title="المالية" subtitle="صورة واضحة عن التدفقات، الأرصدة، والاستحقاقات." action={<Button variant="ghost"><Download className="size-4" />تقرير مالي</Button>} /><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><StatCard title="إجمالي المعاملات" value="٢٬٨٤٠٬٦٠٠ ر.س" change="+١٩.٤%" icon={CircleDollarSign} /><StatCard title="مستحق للمبدعين" value="١٨٦٬٤٠٠ ر.س" icon={Clock3} accent="amber" /><StatCard title="رسوم المنصة" value="٢٤٨٬٩٢٠ ر.س" change="+١١.٨%" icon={TrendingUp} accent="blue" /><StatCard title="طلبات سحب" value="٤٢" icon={WalletCards} /></div><div className="mt-5 rounded-xl border bg-card p-6"><h3 className="font-bold">آخر التسويات</h3><div className="mt-5 overflow-x-auto"><table className="w-full min-w-[600px] text-right text-sm"><thead className="border-b text-xs text-muted-foreground"><tr><th className="pb-3">المرجع</th><th className="pb-3">الطرف</th><th className="pb-3">المبلغ</th><th className="pb-3">التاريخ</th><th className="pb-3">الحالة</th></tr></thead><tbody className="divide-y">{[['#AP-8421', 'سارة العتيبي', '١٬٢٠٠ ر.س', 'اليوم', 'مكتمل'], ['#AP-8420', 'فريق موجة', '٤٨٬٠٠٠ ر.س', 'أمس', 'محجوز'], ['#AP-8419', 'نواف السالم', '٢٬٤٠٠ ر.س', '١٢ مايو', 'قيد المعالجة']].map((r) => <tr key={r[0]}>{r.map((x, i) => <td key={x} className={`py-4 ${i === 0 ? 'font-mono-app font-semibold' : ''}`}>{i === 4 ? <Badge tone={x === 'مكتمل' ? 'green' : 'amber'}>{x}</Badge> : x}</td>)}</tr>)}</tbody></table></div></div></>; }
@@ -243,19 +242,129 @@ function Notifications() {
 
 function Tier() { return <><PageHead eyebrow="رحلتك في AdPerform" title="مستواك: ذهبي" subtitle="كلما صنعت أثراً أكبر، فتحت لك فرصاً أفضل." action={<Badge tone="amber"><Sparkles className="size-3.5" />الذهبي</Badge>} /><div className="rounded-2xl bg-[#173b45] p-6 text-white md:p-8"><div className="flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><div className="text-xs tracking-[.18em] text-[#8ad7b8]">NEXT TIER</div><h2 className="mt-2 text-3xl font-bold">بلاتيني</h2><p className="mt-2 text-sm text-white/60">أكمل ٣ حملات أخرى للوصول إلى المستوى التالي.</p></div><div className="text-left font-mono-app text-4xl font-bold text-[#f0b255]">٧٢٪</div></div><div className="mt-7 h-3 overflow-hidden rounded-full bg-white/10"><div className="h-full w-[72%] rounded-full bg-[#f0b255]" /></div><div className="mt-3 flex justify-between text-xs text-white/45"><span>ذهبي · الحالي</span><span>بلاتيني · ٢٨٪ متبقية</span></div></div><div className="mt-5 grid gap-5 md:grid-cols-2"><section className="rounded-xl border bg-card p-6"><h3 className="font-bold">مزاياك الحالية</h3><div className="mt-5 space-y-4">{['أولوية في الحملات المطابقة', 'دعم دفع سريع', 'شارة موثوق في ملفك', 'تحليلات متقدمة للجمهور'].map((x) => <div key={x} className="flex items-center gap-3 text-sm"><div className="grid size-6 place-items-center rounded-full bg-emerald-100 text-emerald-700"><Check className="size-3.5" /></div>{x}</div>)}</div></section><section className="rounded-xl border bg-card p-6"><h3 className="font-bold">كيف تصل إلى بلاتيني؟</h3><div className="mt-5 space-y-5">{[['اكتمال الحملات', '١٧ / ٢٠', 85], ['معدل القبول', '٩٢٪ / ٩٠٪', 92], ['جودة المحتوى', '٤.٨ / ٥', 96]].map(([x, v, p]) => <div key={String(x)}><div className="mb-2 flex justify-between text-sm"><span>{x}</span><strong>{v}</strong></div><ProgressBar value={Number(p)} color="bg-accent" /></div>)}</div></section></div></>; }
 
-function AdminSettings() { return <><PageHead eyebrow="نظام المنصة" title="الإعدادات الديناميكية" subtitle="قواعد قابلة للتعديل تحافظ على اتساق التجربة." action={<Button><Check className="size-4" />حفظ التغييرات</Button>} /><div className="grid gap-4 md:grid-cols-2">{[['نسبة رسوم المنصة', '١٠٪', 'تطبق على أرباح المبدعين'], ['الحد الأدنى للسحب', '٥٠٠ ر.س', 'لجميع المبدعين'], ['زمن المراجعة المستهدف', '٤ ساعات', 'تنبيه عند تجاوزه'], ['مدة صلاحية الطلب', '٧ أيام', 'قبل إغلاق الفرصة']].map(([a, b, c]) => <div key={a} className="rounded-xl border bg-card p-5"><div className="flex items-center justify-between"><div><h3 className="font-bold">{a}</h3><p className="mt-1 text-xs text-muted-foreground">{c}</p></div><input defaultValue={b} className="w-28 rounded-lg border bg-background px-3 py-2 text-left font-mono-app text-sm outline-none focus:ring-2 focus:ring-primary" dir="ltr" data-testid={`input-config-${a}`} /></div></div>)}</div><div className="mt-5 rounded-xl border bg-card p-6"><h3 className="font-bold">خصائص المنصة</h3><div className="mt-5 divide-y">{['المراجعة البشرية إلزامية', 'إشعارات الأداء الأسبوعية', 'اقتراحات المبدعين الذكية', 'تسويات آلية للمحتوى المعتمد'].map((x, i) => <div key={x} className="flex items-center justify-between py-4"><span className="text-sm">{x}</span><input type="checkbox" defaultChecked={i !== 1} className="size-4 accent-[hsl(var(--primary))]" data-testid={`checkbox-config-${i}`} /></div>)}</div></div></>; }
+function AdminSettings() {
+  const [mode, setMode] = useState<'human' | 'ai'>('human');
+  const [canManage, setCanManage] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const meResponse = await fetch('/api/v1/me', { credentials: 'include' });
+        if (!meResponse.ok) return;
+        const me = await meResponse.json() as { role?: string };
+        const allowed = me.role === 'admin' || me.role === 'super_admin';
+        if (cancelled) return;
+        setCanManage(allowed);
+        if (!allowed) return;
+        const modeResponse = await fetch('/api/v1/admin/platform-settings/review-mode', { credentials: 'include' });
+        if (modeResponse.ok) {
+          const setting = await modeResponse.json() as { mode?: 'human' | 'ai' };
+          if (!cancelled && (setting.mode === 'human' || setting.mode === 'ai')) setMode(setting.mode);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const saveReviewMode = async (nextMode: 'human' | 'ai') => {
+    setSaving(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/v1/admin/platform-settings/review-mode', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: nextMode }),
+      });
+      if (!response.ok) throw new Error('forbidden');
+      const result = await response.json() as { mode?: 'human' | 'ai' };
+      setMode(result.mode === 'ai' ? 'ai' : 'human');
+      setMessage('تم حفظ وضع المراجعة وتسجيل التغيير في سجل التدقيق.');
+    } catch {
+      setMessage('تعذر تغيير وضع المراجعة. يلزم دور Admin أو Super Admin.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return <><PageHead eyebrow="نظام المنصة" title="الإعدادات الديناميكية" subtitle="قواعد قابلة للتعديل تحافظ على اتساق التجربة." />
+    <div className="grid gap-4 md:grid-cols-2">{[['نسبة رسوم المنصة', '١٠٪', 'تطبق على أرباح المبدعين'], ['الحد الأدنى للسحب', '٥٠٠ ر.س', 'لجميع المبدعين'], ['زمن المراجعة المستهدف', '٤ ساعات', 'تنبيه عند تجاوزه'], ['مدة صلاحية الطلب', '٧ أيام', 'قبل إغلاق الفرصة']].map(([a, b, c]) => <div key={a} className="rounded-xl border bg-card p-5"><div className="flex items-center justify-between"><div><h3 className="font-bold">{a}</h3><p className="mt-1 text-xs text-muted-foreground">{c}</p></div><input defaultValue={b} className="w-28 rounded-lg border bg-background px-3 py-2 text-left font-mono-app text-sm outline-none focus:ring-2 focus:ring-primary" dir="ltr" data-testid={`input-config-${a}`} /></div></div>)}</div>
+    <div className="mt-5 rounded-xl border bg-card p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><h3 className="font-bold">وضع المراجعة</h3><p className="mt-1 text-sm text-muted-foreground">Human هو الوضع الافتراضي. التبديل إلى AI متاح لمسؤول المنصة فقط، ولا يمنح AI صلاحية اتخاذ قرار مالي.</p></div><Badge tone={mode === 'human' ? 'green' : 'amber'}>{mode === 'human' ? 'مراجعة بشرية' : 'مراجعة AI'}</Badge></div>
+      {loading ? <p className="mt-5 text-sm text-muted-foreground">جارٍ التحقق من صلاحيتك...</p> : !canManage ? <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">هذه الإعدادات للـAdmin وSuper Admin فقط. لا يمكنك تغيير نوع المراجعة.</div> : <div className="mt-5 flex flex-wrap gap-2"><Button variant={mode === 'human' ? 'primary' : 'secondary'} disabled={saving || mode === 'human'} onClick={() => void saveReviewMode('human')} testId="button-review-mode-human">Human — افتراضي</Button><Button variant={mode === 'ai' ? 'primary' : 'secondary'} disabled={saving || mode === 'ai'} onClick={() => void saveReviewMode('ai')} testId="button-review-mode-ai">AI — مسؤول فقط</Button></div>}
+      {message && <p className="mt-4 text-sm font-semibold text-primary">{message}</p>}
+    </div>
+    <div className="mt-5 rounded-xl border bg-card p-6"><h3 className="font-bold">خصائص المنصة</h3><div className="mt-5 divide-y">{['إشعارات الأداء الأسبوعية', 'اقتراحات المبدعين الذكية', 'تسويات آلية للمحتوى المعتمد'].map((x, i) => <div key={x} className="flex items-center justify-between py-4"><span className="text-sm">{x}</span><input type="checkbox" defaultChecked={i !== 0} className="size-4 accent-[hsl(var(--primary))]" data-testid={`checkbox-config-${i}`} /></div>)}</div></div>
+  </>;
+}
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: '#188f7a',
+    colorForeground: '#18323d',
+    colorMutedForeground: '#6c7a7f',
+    colorDanger: '#b42318',
+    colorBackground: '#ffffff',
+    colorInput: '#ffffff',
+    colorInputForeground: '#18323d',
+    colorNeutral: '#d9e0dd',
+    fontFamily: 'IBM Plex Sans Arabic, sans-serif',
+    borderRadius: '0.75rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#ffffff] rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#18323d] font-bold',
+    headerSubtitle: 'text-[#6c7a7f]',
+    socialButtonsBlockButtonText: 'text-[#18323d]',
+    formFieldLabel: 'text-[#18323d]',
+    footerActionLink: 'text-[#188f7a] font-semibold',
+    footerActionText: 'text-[#6c7a7f]',
+    dividerText: 'text-[#6c7a7f]',
+    formButtonPrimary: 'bg-[#188f7a] hover:bg-[#147966]',
+    formFieldInput: 'border-[#d9e0dd] text-[#18323d]',
+    alertText: 'text-[#b42318]',
+  },
+};
+
+function ProtectedWorkspace({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">جارٍ التحقق من الجلسة...</div>;
+  if (!isSignedIn) return <div className="grid min-h-[100dvh] place-items-center bg-background p-6 text-center"><div><h1 className="text-2xl font-bold">سجّل الدخول للوصول إلى مساحة العمل</h1><Button href="/auth/login" className="mt-5">تسجيل الدخول</Button></div></div>;
+  return <>{children}</>;
+}
 
 function Router() {
   const [location] = useLocation();
   const role: Role = location.startsWith('/creator') ? 'creator' : location.startsWith('/reviewer') ? 'reviewer' : location.startsWith('/admin') ? 'admin' : 'advertiser';
-  const publicRoute = location === '/' || location === '/auth/login';
-  return publicRoute ? <Switch><Route path="/" component={Landing} /><Route path="/auth/login" component={Login} /><Route component={NotFound} /></Switch> : <Shell role={role}><Switch><Route path="/advertiser" component={() => <Dashboard role="advertiser" />} /><Route path="/advertiser/campaigns" component={AdvertiserCampaigns} /><Route path="/advertiser/campaigns/new" component={CampaignBuilder} /><Route path="/advertiser/campaigns/:id" component={() => <CampaignDetail role="advertiser" />} /><Route path="/advertiser/creators" component={Creators} /><Route path="/advertiser/analytics" component={() => <Analytics role="advertiser" />} /><Route path="/advertiser/wallet" component={() => <Wallet role="advertiser" />} /><Route path="/creator" component={() => <Dashboard role="creator" />} /><Route path="/creator/campaigns" component={CreatorMarketplace} /><Route path="/creator/campaigns/:id" component={() => <CampaignDetail role="creator" />} /><Route path="/creator/applications" component={() => <TablePage kind="applications" />} /><Route path="/creator/content" component={() => <TablePage kind="content" />} /><Route path="/creator/analytics" component={() => <Analytics role="creator" />} /><Route path="/creator/wallet" component={() => <Wallet role="creator" />} /><Route path="/creator/tier" component={Tier} /><Route path="/reviewer" component={Reviewer} /><Route path="/reviewer/content/:id" component={ReviewDetail} /><Route path="/admin" component={AdminOverview} /><Route path="/admin/users" component={() => <TablePage kind="users" />} /><Route path="/admin/campaigns" component={() => <TablePage kind="campaigns" />} /><Route path="/admin/content" component={() => <TablePage kind="admincontent" />} /><Route path="/admin/finance" component={AdminFinance} /><Route path="/admin/settings" component={AdminSettings} /><Route path="/notifications" component={Notifications} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell>;
+  const publicRoute = location === '/' || location === '/auth/login' || location.startsWith('/sign-in') || location.startsWith('/sign-up');
+  return publicRoute ? <Switch><Route path="/" component={Landing} /><Route path="/auth/login" component={Login} /><Route path="/sign-in/*?" component={() => <div className="grid min-h-[100dvh] place-items-center bg-background p-4"><SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} /></div>} /><Route path="/sign-up/*?" component={() => <div className="grid min-h-[100dvh] place-items-center bg-background p-4"><SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} /></div>} /><Route component={NotFound} /></Switch> : <ProtectedWorkspace><Shell role={role}><Switch><Route path="/advertiser" component={() => <Dashboard role="advertiser" />} /><Route path="/advertiser/campaigns" component={AdvertiserCampaigns} /><Route path="/advertiser/campaigns/new" component={CampaignBuilder} /><Route path="/advertiser/campaigns/:id" component={() => <CampaignDetail role="advertiser" />} /><Route path="/advertiser/creators" component={Creators} /><Route path="/advertiser/analytics" component={() => <Analytics role="advertiser" />} /><Route path="/advertiser/wallet" component={() => <Wallet role="advertiser" />} /><Route path="/creator" component={() => <Dashboard role="creator" />} /><Route path="/creator/campaigns" component={CreatorMarketplace} /><Route path="/creator/campaigns/:id" component={() => <CampaignDetail role="creator" />} /><Route path="/creator/campaigns/:id" component={() => <CampaignDetail role="creator" />} /><Route path="/creator/applications" component={() => <TablePage kind="applications" />} /><Route path="/creator/content" component={() => <TablePage kind="content" />} /><Route path="/creator/analytics" component={() => <Analytics role="creator" />} /><Route path="/creator/wallet" component={() => <Wallet role="creator" />} /><Route path="/creator/tier" component={Tier} /><Route path="/reviewer" component={Reviewer} /><Route path="/reviewer/content/:id" component={ReviewDetail} /><Route path="/admin" component={AdminOverview} /><Route path="/admin/users" component={() => <TablePage kind="users" />} /><Route path="/admin/campaigns" component={() => <TablePage kind="campaigns" />} /><Route path="/admin/content" component={() => <TablePage kind="admincontent" />} /><Route path="/admin/finance" component={AdminFinance} /><Route path="/admin/settings" component={AdminSettings} /><Route path="/notifications" component={Notifications} /><Route path="/settings" component={SettingsPage} /><Route component={NotFound} /></Switch></Shell></ProtectedWorkspace>;
 }
 
 function NotFound() { return <div className="grid min-h-[100dvh] place-items-center bg-background p-6 text-center" dir="rtl"><div><div className="font-mono-app text-7xl font-bold text-primary">٤٠٤</div><h1 className="mt-4 text-2xl font-bold">هذه الصفحة غير موجودة</h1><p className="mt-2 text-muted-foreground">ربما تغيّر الرابط أو لم نجهزه بعد.</p><Button href="/" className="mt-6">العودة للرئيسية</Button></div></div>; }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><ErrorBoundary resetKey={useLocation()[0]}><Router /></ErrorBoundary></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  if (!clerkPubKey) throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in environment.');
+  return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={clerkAppearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ signIn: { start: { title: 'تسجيل الدخول إلى AdPerform', subtitle: 'مرحباً بعودتك — أدخل إلى مساحة الأداء الخاصة بك' } }, signUp: { start: { title: 'أنشئ حسابك في AdPerform', subtitle: 'ابدأ بقياس الأثر بثقة ووضوح' } } }}><QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={basePath}><ErrorBoundary resetKey={useLocation()[0]}><Router /></ErrorBoundary></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider></ClerkProvider>;
 }
 
 export default App;

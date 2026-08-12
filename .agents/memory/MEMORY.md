@@ -1,0 +1,2 @@
+- [مصادقة Clerk ومسار التطبيق](clerk-auth.md) — استخدم مسار artifact الكامل مع publishableKeyFromHost وproxyUrl وشاشة دخول مخصصة.
+- [حماية وضع المراجعة](review-mode-rbac.md) — human افتراضي، وتغيير human/AI قرار خادمي مقيد بـAdmin/Super Admin مع audit log.

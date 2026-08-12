@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authenticated account operations
+  - name: campaigns
+    description: Campaign lifecycle operations
+  - name: content
+    description: Content submission and human review
+  - name: admin
+    description: Super admin configuration
 paths:
   /healthz:
     get:
@@ -24,7 +32,266 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /v1/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the authenticated platform user
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/campaigns:
+    get:
+      operationId: listCampaigns
+      tags: [campaigns]
+      summary: List campaigns visible to the current user
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            $ref: "#/components/schemas/CampaignStatus"
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Campaign page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createCampaign
+      tags: [campaigns]
+      summary: Create a campaign draft
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCampaignRequest"
+      responses:
+        "201":
+          description: Created campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/campaigns/{campaignId}:
+    get:
+      operationId: getCampaign
+      tags: [campaigns]
+      summary: Get a campaign
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      responses:
+        "200":
+          description: Campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateCampaign
+      tags: [campaigns]
+      summary: Update a draft campaign
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCampaignRequest"
+      responses:
+        "200":
+          description: Updated campaign
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /v1/campaigns/{campaignId}/applications:
+    post:
+      operationId: applyToCampaign
+      tags: [campaigns]
+      summary: Apply to a campaign as a creator
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/CampaignId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "201":
+          description: Application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "409":
+          description: Duplicate application
+  /v1/content/review-queue:
+    get:
+      operationId: listReviewQueue
+      tags: [content]
+      summary: List content waiting for human review
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Review queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentSubmission"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/content/{contentId}/review:
+    post:
+      operationId: decideContentReview
+      tags: [content]
+      summary: Record a human review decision
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionRequest"
+      responses:
+        "200":
+          description: Updated content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentSubmission"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /v1/admin/platform-settings/review-mode:
+    get:
+      operationId: getReviewMode
+      tags: [admin]
+      summary: Read the platform review mode
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Review mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewModeResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      operationId: updateReviewMode
+      tags: [admin]
+      summary: Change the platform review mode
+      description: Only an admin or super admin can switch from human review to AI review.
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewModeRequest"
+      responses:
+        "200":
+          description: Updated review mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewModeResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __session
+  parameters:
+    CampaignId:
+      in: path
+      name: campaignId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ContentId:
+      in: path
+      name: contentId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Permission denied
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +300,137 @@ components:
           type: string
       required:
         - status
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+      required: [code, message]
+    UserRole:
+      type: string
+      enum: [advertiser, creator, reviewer, accountant, admin, super_admin, ai_operator]
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        clerkUserId: { type: string }
+        email: { type: string, nullable: true }
+        displayName: { type: string, nullable: true }
+        role: { $ref: "#/components/schemas/UserRole" }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, clerkUserId, role, isActive, createdAt]
+    CampaignStatus:
+      type: string
+      enum: [draft, under_review, approved, funding, active, paused, completed, settlement, closed, archived]
+    Campaign:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        createdByUserId: { type: string, format: uuid }
+        name: { type: string }
+        brief: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/CampaignStatus" }
+        budgetMinor: { type: integer, minimum: 0 }
+        currency: { type: string }
+        cpvMinor: { type: integer, minimum: 0 }
+        targetViews: { type: integer, minimum: 0 }
+        target: { type: object, additionalProperties: true }
+        requirements: { type: object, additionalProperties: true }
+        platforms:
+          type: array
+          items: { type: string }
+        startsOn: { type: string, format: date-time, nullable: true }
+        endsOn: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, organizationId, createdByUserId, name, status, budgetMinor, currency, cpvMinor, targetViews, target, requirements, platforms, createdAt, updatedAt]
+    CreateCampaignRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        brief: { type: string, nullable: true }
+        budgetMinor: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        cpvMinor: { type: integer, minimum: 0 }
+        targetViews: { type: integer, minimum: 0 }
+        target: { type: object, additionalProperties: true }
+        requirements: { type: object, additionalProperties: true }
+        platforms:
+          type: array
+          items: { type: string }
+        startsOn: { type: string, format: date-time, nullable: true }
+        endsOn: { type: string, format: date-time, nullable: true }
+      required: [name, budgetMinor, currency, cpvMinor, targetViews]
+    UpdateCampaignRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreateCampaignRequest"
+      description: Draft campaign fields to update
+    CampaignList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Campaign" }
+        nextCursor: { type: string, nullable: true }
+      required: [items]
+    CreateApplicationRequest:
+      type: object
+      properties:
+        pitch: { type: string, nullable: true }
+      required: []
+    Application:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        creatorId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, approved, rejected, withdrawn] }
+        pitch: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, campaignId, creatorId, status, createdAt]
+    ContentSubmission:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        creatorId: { type: string, format: uuid }
+        applicationId: { type: string, format: uuid, nullable: true }
+        postUrl: { type: string, format: uri }
+        caption: { type: string, nullable: true }
+        hashtags:
+          type: array
+          items: { type: string }
+        platform: { type: string }
+        status: { type: string, enum: [submitted, in_review, approved, rejected, needs_changes, escalated] }
+        submittedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, campaignId, creatorId, postUrl, hashtags, platform, status, submittedAt, updatedAt]
+    ReviewDecisionRequest:
+      type: object
+      properties:
+        decision: { type: string, enum: [approved, rejected, needs_changes, escalated] }
+        checklist: { type: object, additionalProperties: { type: boolean } }
+        reason: { type: string, nullable: true }
+        note: { type: string, nullable: true }
+      required: [decision]
+    ReviewMode:
+      type: string
+      enum: [human, ai]
+    ReviewModeRequest:
+      type: object
+      properties:
+        mode: { $ref: "#/components/schemas/ReviewMode" }
+      required: [mode]
+    ReviewModeResponse:
+      type: object
+      properties:
+        mode: { $ref: "#/components/schemas/ReviewMode" }
+        changedAt: { type: string, format: date-time }
+      required: [mode, changedAt]
 
